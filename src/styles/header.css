@@ -1,0 +1,22 @@
+header {
+    background-color: #282c34;
+    padding: 1rem;
+    color: white;
+    width: 100%;
+    padding: 1rem;
+    border-bottom: '1px solid #ddd';
+}
+
+header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+ul {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+}
