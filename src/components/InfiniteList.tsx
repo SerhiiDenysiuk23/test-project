@@ -83,7 +83,7 @@ const InfiniteList = () => {
             }
           }
         },
-        { threshold: 0.1 }
+        { threshold: 1 }
       );
       observer.current.observe(elemForLoadRef.current);
     }
@@ -98,7 +98,6 @@ const InfiniteList = () => {
 
   return (
     <div className="infinite-list">
-      <h1>Infinite List</h1>
       {!!list.length && (
         <ul>
           {list.map((photo, index) => (
@@ -115,7 +114,7 @@ const InfiniteList = () => {
           ))}
         </ul>
       )}
-      {(isPending || isPendingTransition) && <p>Loading...</p>}
+      {(isPending || isPendingTransition) && <div className="loader" />}
       {fetchState.data == null &&
         fetchState.message &&
         !(isPending || isPendingTransition) && (

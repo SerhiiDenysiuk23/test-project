@@ -7,9 +7,11 @@ function App() {
     <>
       <Header />
       <main>
-        <h1>Hello World</h1>
-        <InfiniteList />
+        <section>
+          <InfiniteList />
+        </section>
       </main>
+
       <Footer />
     </>
   );
