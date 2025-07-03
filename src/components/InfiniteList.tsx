@@ -1,28 +1,31 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import type { IPhoto, IResponse } from '../types/IResponse';
 import ImageItem from './ImageItem';
 
 interface SubmissionState {
-  status: 'idle' | 'pending' | 'success' | 'error';
   data: Omit<IResponse, 'photos'> | null;
   message: string;
 }
 
 const InfiniteList = () => {
-  const [state, setState] = useState<SubmissionState>({
-    status: 'idle',
-    data: null,
-    message: '',
-  });
   const [list, setList] = useState<IPhoto[]>([]);
   const elemForLoadRef = useRef<HTMLLIElement | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+  const [isPendingTransition, startTransition] = useTransition();
 
-  const fetchData = useCallback(
-    async (nextPage?: string): Promise<SubmissionState> => {
+  const [fetchState, action, isPending] = useActionState(
+    async (state: SubmissionState): Promise<SubmissionState> => {
       try {
         const response = await fetch(
-          nextPage ?? 'https://api.pexels.com/v1/curated?page=1&per_page=40',
+          state.data?.next_page ??
+            'https://api.pexels.com/v1/curated?page=1&per_page=20',
           {
             headers: {
               'Content-Type': 'application/json',
@@ -37,40 +40,35 @@ const InfiniteList = () => {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        console.log(data);
-
         const { photos, ...dataWithoutPhotos } = data;
-        const result: SubmissionState = {
-          status: 'success',
+        setList((prevList) => [...prevList, ...photos]);
+        return {
           data: dataWithoutPhotos,
           message: 'Data fetched successfully',
         };
-        setList([...list, ...photos]);
-        setState({
-          status: 'success',
-          data: dataWithoutPhotos,
-          message: 'Data fetched successfully',
-        });
-        return result;
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error(
           'There has been a problem with your fetch operation:',
           error
         );
-        const result: SubmissionState = {
-          status: 'error',
+        return {
           data: null,
           message: 'Failed to fetch data',
         };
-        setState(result);
-        return result;
       }
     },
-    [list]
+    { data: null, message: '' }
   );
 
+  const triggerFetch = useCallback(() => {
+    startTransition(() => {
+      action();
+    });
+  }, [action]);
+
   useEffect(() => {
-    fetchData();
+    triggerFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -79,13 +77,13 @@ const InfiniteList = () => {
       observer.current = new IntersectionObserver(
         (entries) => {
           if (entries[0].isIntersecting) {
-            const nextPage = state.data?.next_page;
+            const nextPage = fetchState.data?.next_page;
             if (nextPage) {
-              fetchData(nextPage);
+              triggerFetch();
             }
           }
         },
-        { threshold: 1.0 }
+        { threshold: 0.1 }
       );
       observer.current.observe(elemForLoadRef.current);
     }
@@ -96,14 +94,12 @@ const InfiniteList = () => {
         observer.current.unobserve(elemForLoadRef.current);
       }
     };
-  }, [fetchData, list, state.data?.next_page]);
+  }, [triggerFetch, fetchState.data?.next_page, isPending]);
 
   return (
     <div className="infinite-list">
       <h1>Infinite List</h1>
-      {state.status === 'pending' && <p>Loading...</p>}
-      {state.status === 'error' && <p>Error: {state.message}</p>}
-      {state.status === 'success' && list && (
+      {!!list.length && (
         <ul>
           {list.map((photo, index) => (
             <li
@@ -119,6 +115,12 @@ const InfiniteList = () => {
           ))}
         </ul>
       )}
+      {(isPending || isPendingTransition) && <p>Loading...</p>}
+      {fetchState.data == null &&
+        fetchState.message &&
+        !(isPending || isPendingTransition) && (
+          <p>Error: {fetchState.message}</p>
+        )}
     </div>
   );
 };
