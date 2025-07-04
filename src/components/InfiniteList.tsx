@@ -1,127 +1,99 @@
-import {
-  useActionState,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { IPhoto, IResponse } from '../types/IResponse';
-import ImageItem from './ImageItem';
+import { ImageItem } from './ImageItem';
 
 interface SubmissionState {
-  data: Omit<IResponse, 'photos'> | null;
-  message: string;
+  data: Omit<IResponse, 'photos'>;
+  errorMessage: string;
 }
 
-const InfiniteList = () => {
+export const InfiniteList = () => {
   const [list, setList] = useState<IPhoto[]>([]);
-  const elemForLoadRef = useRef<HTMLLIElement | null>(null);
-  const observer = useRef<IntersectionObserver | null>(null);
+  const elemForLoadRef = useRef<HTMLDivElement | null>(null);
   const [isPendingTransition, startTransition] = useTransition();
-
-  const [fetchState, action, isPending] = useActionState(
-    async (state: SubmissionState): Promise<SubmissionState> => {
-      try {
-        const response = await fetch(
-          state.data?.next_page ??
-            'https://api.pexels.com/v1/curated?page=1&per_page=20',
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              Authorization:
-                'nX7eLy9mXIcP73JMZiNVXHXH6eSSxy9QkY0fsg8FCr8YdnAJif4nNxNy',
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        const { photos, ...dataWithoutPhotos } = data;
-        setList((prevList) => [...prevList, ...photos]);
-        return {
-          data: dataWithoutPhotos,
-          message: 'Data fetched successfully',
-        };
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error(
-          'There has been a problem with your fetch operation:',
-          error
-        );
-        return {
-          data: null,
-          message: 'Failed to fetch data',
-        };
-      }
+  const [fetchState, setSubmissionState] = useState<SubmissionState>({
+    data: {
+      page: 0,
+      per_page: 20,
+      total_results: 0,
+      next_page: 'https://api.pexels.com/v1/curated?page=1&per_page=20',
     },
-    { data: null, message: '' }
-  );
+    errorMessage: '',
+  });
 
-  const triggerFetch = useCallback(() => {
-    startTransition(() => {
-      action();
-    });
-  }, [action]);
+  const fetchData = useCallback(async (next_page: string) => {
+    try {
+      const response = await fetch(next_page, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization:
+            'nX7eLy9mXIcP73JMZiNVXHXH6eSSxy9QkY0fsg8FCr8YdnAJif4nNxNy',
+        },
+      });
 
-  useEffect(() => {
-    triggerFetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+      const { photos, ...dataWithoutPhotos } = data;
+      setList((prevList) => [...prevList, ...photos]);
+      setSubmissionState({
+        data: dataWithoutPhotos,
+        errorMessage: '',
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(
+        'There has been a problem with your fetch operation:',
+        error
+      );
+      setSubmissionState((prevState) => ({
+        ...prevState,
+        errorMessage: 'Failed to fetch data',
+      }));
+    }
   }, []);
 
   useEffect(() => {
-    if (elemForLoadRef.current) {
-      observer.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting) {
-            const nextPage = fetchState.data?.next_page;
-            if (nextPage) {
-              triggerFetch();
-            }
-          }
-        },
-        { threshold: 1 }
-      );
-      observer.current.observe(elemForLoadRef.current);
-    }
-
+    if (!elemForLoadRef.current) return;
+    const loadElem = elemForLoadRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          startTransition(() => fetchData(fetchState.data.next_page));
+        }
+      },
+      { threshold: 1 }
+    );
+    observer.observe(loadElem);
     return () => {
-      if (observer.current && elemForLoadRef.current) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        observer.current.unobserve(elemForLoadRef.current);
-      }
+      observer.unobserve(loadElem);
     };
-  }, [triggerFetch, fetchState.data?.next_page, isPending]);
+  }, [fetchState.data, fetchData]);
 
   return (
     <div className="infinite-list">
       {!!list.length && (
         <ul>
-          {list.map((photo, index) => (
-            <li
-              ref={index === list.length - 1 ? elemForLoadRef : undefined}
-              key={photo.id}
-            >
-              <ImageItem
-                src={photo.src.medium}
-                alt={`Photo by ${photo.photographer}`}
-                author={photo.photographer}
-              />
-            </li>
-          ))}
+          {list.map((photo) => {
+            return (
+              <li key={photo.id}>
+                <ImageItem
+                  src={photo.src.medium}
+                  alt={`Photo by ${photo.photographer}`}
+                  author={photo.photographer}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
-      {(isPending || isPendingTransition) && <div className="loader" />}
-      {fetchState.data == null &&
-        fetchState.message &&
-        !(isPending || isPendingTransition) && (
-          <p>Error: {fetchState.message}</p>
-        )}
+      <div ref={elemForLoadRef} />
+      {isPendingTransition && <div className="loader" />}
+      {fetchState.errorMessage && !isPendingTransition && (
+        <p>Error: {fetchState.errorMessage}</p>
+      )}
     </div>
   );
 };
-
-export default InfiniteList;

@@ -1,6 +1,4 @@
-import React from 'react';
-
-const Header: React.FC = () => {
+export const Header = () => {
   return (
     <header>
       <section className="container">
@@ -24,5 +22,3 @@ const Header: React.FC = () => {
     </header>
   );
 };
-
-export default Header;

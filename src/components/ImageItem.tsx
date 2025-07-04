@@ -6,11 +6,13 @@ interface Props {
   author: string;
 }
 
-const ImageItem: React.FC<Props> = ({ src, alt = 'Pexels Image', author }) => (
+export const ImageItem: React.FC<Props> = ({
+  src,
+  alt = 'Pexels Image',
+  author,
+}) => (
   <div className="image-item">
     <img src={src} alt={alt} />
     <div className="image-author">Photo by {author}</div>
   </div>
 );
-
-export default ImageItem;
