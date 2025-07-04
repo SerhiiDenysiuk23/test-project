@@ -56,7 +56,7 @@ export const InfiniteList = () => {
   }, []);
 
   useEffect(() => {
-    if (!elemForLoadRef.current) return;
+    if (!elemForLoadRef.current || isPendingTransition) return;
     const loadElem = elemForLoadRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -70,7 +70,7 @@ export const InfiniteList = () => {
     return () => {
       observer.unobserve(loadElem);
     };
-  }, [fetchState.data, fetchData]);
+  }, [fetchState.data.next_page, fetchData, isPendingTransition]);
 
   return (
     <div className="infinite-list">
