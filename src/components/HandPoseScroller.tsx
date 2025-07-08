@@ -59,10 +59,27 @@ export const HandPoseScroller = () => {
         return;
       }
       detector = detectorTmp;
-      intervalId = setInterval(() => {
-        detect();
-      }, 100);
+      startDetectionInterval();
     };
+
+    const startDetectionInterval = () => {
+      if (!intervalId)
+        intervalId = setInterval(() => {
+          detect();
+        }, 100);
+    };
+    const stopDetectionInterval = () => {
+      if (!intervalId) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) stopDetectionInterval();
+      else if (!isCancel) startDetectionInterval();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     (async () => {
       try {
@@ -76,9 +93,8 @@ export const HandPoseScroller = () => {
 
     return () => {
       isCancel = true;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      stopDetectionInterval();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       videoCurrent.pause();
       if (stream) {
         const tracks = stream.getTracks();
