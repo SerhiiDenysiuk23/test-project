@@ -2,7 +2,18 @@ import { useEffect, useRef } from 'react';
 import * as handPoseDetection from '@tensorflow-models/hand-pose-detection';
 import '@mediapipe/hands';
 
-export const HandPoseScroller = () => {
+interface Props {
+  effectTrigger: number;
+}
+
+const closeStream = (stream: MediaStream | null) => {
+  if (stream) {
+    const tracks = stream.getTracks();
+    tracks.forEach((track) => track.stop());
+  }
+};
+
+export const HandPoseScroller = ({ effectTrigger }: Props) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -18,6 +29,7 @@ export const HandPoseScroller = () => {
         video: true,
       });
       if (isCancel) {
+        closeStream(streamTmp);
         return;
       }
       stream = streamTmp;
@@ -56,14 +68,14 @@ export const HandPoseScroller = () => {
         }
       );
       if (isCancel) {
+        detectorTmp.dispose();
         return;
       }
       detector = detectorTmp;
-      startDetectionInterval();
     };
 
     const startDetectionInterval = () => {
-      if (!intervalId)
+      if (!intervalId && detector)
         intervalId = setInterval(() => {
           detect();
         }, 100);
@@ -83,28 +95,31 @@ export const HandPoseScroller = () => {
 
     (async () => {
       try {
-        if (!isCancel) await startCamera();
+        await startCamera();
         if (!isCancel) await initDetector();
+        startDetectionInterval();
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error initializing hand pose detection:', error);
+        cleanup();
       }
     })();
 
-    return () => {
-      isCancel = true;
+    function cleanup() {
       stopDetectionInterval();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       videoCurrent.pause();
-      if (stream) {
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => track.stop());
-      }
+      closeStream(stream);
       if (detector) {
         detector.dispose();
       }
+    }
+
+    return () => {
+      isCancel = true;
+      cleanup();
     };
-  }, []);
+  }, [effectTrigger]);
 
   return (
     <>
