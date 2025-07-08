@@ -9,24 +9,20 @@ export const HandPoseScroller = () => {
     if (!videoRef.current) return;
 
     const videoCurrent = videoRef.current;
+    let stream: MediaStream | null = null;
     let detector: handPoseDetection.HandDetector | null = null;
-
+    let intervalId: number | null = null;
+    let isCancel = false;
     const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        videoCurrent.srcObject = stream;
-        await new Promise((resolve) => {
-          videoCurrent.onloadedmetadata = () => {
-            resolve(null);
-          };
-        });
-        await videoCurrent.play();
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error accessing webcam:', error);
+      const streamTmp = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+      if (isCancel) {
+        return;
       }
+      stream = streamTmp;
+      videoCurrent.srcObject = stream;
+      await videoCurrent.play();
     };
 
     const detect = async () => {
@@ -50,40 +46,46 @@ export const HandPoseScroller = () => {
     };
 
     const initDetector = async () => {
-      await startCamera();
-      try {
-        detector = await handPoseDetection.createDetector(
-          handPoseDetection.SupportedModels.MediaPipeHands,
-          {
-            runtime: 'mediapipe',
-            modelType: 'lite',
-            solutionPath: './node_modules/@mediapipe/hands',
-            maxHands: 2,
-          }
-        );
-        setInterval(() => {
-          detect();
-        }, 100);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Error initializing handpose detector:', err);
+      const detectorTmp = await handPoseDetection.createDetector(
+        handPoseDetection.SupportedModels.MediaPipeHands,
+        {
+          runtime: 'mediapipe',
+          modelType: 'lite',
+          solutionPath: './node_modules/@mediapipe/hands',
+          maxHands: 2,
+        }
+      );
+      if (isCancel) {
+        return;
       }
+      detector = detectorTmp;
+      intervalId = setInterval(() => {
+        detect();
+      }, 100);
     };
 
-    initDetector();
+    (async () => {
+      try {
+        if (!isCancel) await startCamera();
+        if (!isCancel) await initDetector();
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error initializing hand pose detection:', error);
+      }
+    })();
 
     return () => {
+      isCancel = true;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
       videoCurrent.pause();
-      const stream = videoCurrent.srcObject as MediaStream | null;
       if (stream) {
         const tracks = stream.getTracks();
         tracks.forEach((track) => track.stop());
       }
-      videoCurrent.onloadedmetadata = null;
-      videoCurrent.srcObject = null;
       if (detector) {
         detector.dispose();
-        detector = null;
       }
     };
   }, []);
