@@ -1,17 +1,11 @@
 import { useEffect, useRef } from 'react';
 import * as handPoseDetection from '@tensorflow-models/hand-pose-detection';
 import '@mediapipe/hands';
+import { CancelError } from '../errors/CancelError';
 
 interface Props {
   effectTrigger: number;
 }
-
-const closeStream = (stream: MediaStream | null) => {
-  if (stream) {
-    const tracks = stream.getTracks();
-    tracks.forEach((track) => track.stop());
-  }
-};
 
 export const HandPoseScroller = ({ effectTrigger }: Props) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -25,14 +19,12 @@ export const HandPoseScroller = ({ effectTrigger }: Props) => {
     let intervalId: number | null = null;
     let isCancel = false;
     const startCamera = async () => {
-      const streamTmp = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: true,
       });
       if (isCancel) {
-        closeStream(streamTmp);
-        return;
+        throw new CancelError('Cancelled');
       }
-      stream = streamTmp;
       videoCurrent.srcObject = stream;
       await videoCurrent.play();
     };
@@ -58,7 +50,7 @@ export const HandPoseScroller = ({ effectTrigger }: Props) => {
     };
 
     const initDetector = async () => {
-      const detectorTmp = await handPoseDetection.createDetector(
+      detector = await handPoseDetection.createDetector(
         handPoseDetection.SupportedModels.MediaPipeHands,
         {
           runtime: 'mediapipe',
@@ -68,10 +60,8 @@ export const HandPoseScroller = ({ effectTrigger }: Props) => {
         }
       );
       if (isCancel) {
-        detectorTmp.dispose();
-        return;
+        throw new CancelError('Cancelled');
       }
-      detector = detectorTmp;
     };
 
     const startDetectionInterval = () => {
@@ -99,8 +89,10 @@ export const HandPoseScroller = ({ effectTrigger }: Props) => {
         if (!isCancel) await initDetector();
         startDetectionInterval();
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error initializing hand pose detection:', error);
+        if (!(error instanceof CancelError)) {
+          // eslint-disable-next-line no-console
+          console.error('Error initializing hand pose detection:', error);
+        }
         cleanup();
       }
     })();
@@ -109,9 +101,13 @@ export const HandPoseScroller = ({ effectTrigger }: Props) => {
       stopDetectionInterval();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       videoCurrent.pause();
-      closeStream(stream);
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach((track) => track.stop());
+      }
       if (detector) {
         detector.dispose();
+        detector = null;
       }
     }
 

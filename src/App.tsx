@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { InfiniteList } from './components/InfiniteList';
-import { HandPoseScroller } from './components/HandPoseScroller';
+import { HandPoseScrollerClass } from './components/HandPoseScrollerClass';
 
 export const App = () => {
   const [isClose, setIsClose] = useState(false);
@@ -12,7 +12,9 @@ export const App = () => {
       <Header />
       <main>
         <section>
-          {!isClose && <HandPoseScroller effectTrigger={scrollEffectTrigger} />}
+          {!isClose && (
+            <HandPoseScrollerClass effectTrigger={scrollEffectTrigger} />
+          )}
           <button
             style={{
               position: 'fixed',
