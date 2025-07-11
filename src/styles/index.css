@@ -1,6 +1,8 @@
 @import './header.css';
 @import './footer.css';
 @import './images.css';
+@import './albumPage.css';
+@import './photoPage.css';
 
 *,
 *::before,
