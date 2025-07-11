@@ -1,30 +1,36 @@
 export interface Album {
-  userId: number;
-  id: number;
+  userId: number | number;
+  id: number | number;
   title: string;
 }
 export interface User {
-  id: number;
+  id: number | number;
   username: string;
 }
 export interface Photo {
-  albumId: number;
-  id: number;
+  albumId: number | number;
+  id: number | number;
   title: string;
   url: string;
   thumbnailUrl: string;
 }
 
-const BASE = 'https://jsonplaceholder.typicode.com';
+const BASE = 'http://localhost:3000';
 
 export const fetchAlbums = async (
   page: number,
   limit: number
 ): Promise<{ data: Album[]; totalCount: number }> => {
-  const res = await fetch(`${BASE}/albums?_page=${page}&_limit=${limit}`);
-  const totalCount = Number(res.headers.get('X-Total-Count') || 0);
-  const data: Album[] = await res.json();
-  return { data, totalCount };
+  const res = await fetch(`${BASE}/albums`);
+  const totalCount = 100;
+  let data: Album[] = await res.json();
+
+  data = data.reverse();
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedData = data.slice(startIndex, endIndex);
+
+  return { data: paginatedData, totalCount };
 };
 
 export const fetchUsers = async (): Promise<User[]> => {
@@ -41,6 +47,10 @@ export const createAlbum = async (
   title: string,
   userId: number
 ): Promise<Album> => {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 2000);
+  });
+
   const res = await fetch(`${BASE}/albums`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

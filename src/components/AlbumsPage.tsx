@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
-import { fetchUsers, fetchAlbums, createAlbum } from '../api/core';
+import { fetchUsers, fetchAlbums, createAlbum, type User } from '../api/core';
 import { AlbumCard } from './AlbumCard';
 import { Pagination } from './Pagination';
 
 const LIMIT = 11;
+
+const findUsername = (userId: string | number, users?: User[]) => {
+  return users?.find((u) => u.id == userId)?.username || 'Unknown';
+};
 
 export const AlbumsPage = () => {
   const [page, setPage] = useState(1);
@@ -25,10 +29,16 @@ export const AlbumsPage = () => {
     queryFn: () => fetchAlbums(page, LIMIT),
   });
 
-  const mutation = useMutation({
+  const {
+    isPending: isPendingAddAlbum,
+    variables: addAlbumVariables,
+    mutate: addAlbumMutate,
+    isError: isErrorAddAlbum,
+  } = useMutation({
     mutationFn: ({ title, userId }: { title: string; userId: number }) =>
       createAlbum(title, userId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['albums'] }),
+    // onSuccess: () => queryClient.invalidateQueries({ queryKey: ['albums'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['albums'] }),
   });
 
   const handleAddSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -36,7 +46,7 @@ export const AlbumsPage = () => {
     const title = titleRef.current?.value || '';
     const userId = Number(userRef.current?.value);
     if (title && userId) {
-      mutation.mutate({ title, userId });
+      addAlbumMutate({ title, userId });
       if (titleRef.current) titleRef.current.value = '';
     }
   };
@@ -65,23 +75,26 @@ export const AlbumsPage = () => {
               </option>
             ))}
         </select>
-        <button type="submit" disabled={mutation.isPending}>
+        <button type="submit" disabled={isPendingAddAlbum}>
           Add Album
         </button>
       </form>
 
       <div className="album-list">
+        {isPendingAddAlbum && (
+          <AlbumCard
+            album={addAlbumVariables}
+            username={findUsername(addAlbumVariables.userId, users)}
+          />
+        )}
         {!!albumsData &&
-          albumsData.data.map((album) => {
-            const user = users?.find((u) => u.id === album.userId);
-            return (
-              <AlbumCard
-                key={album.id}
-                album={album}
-                username={user?.username || 'Unknown'}
-              />
-            );
-          })}
+          albumsData.data.map((album) => (
+            <AlbumCard
+              key={album.id}
+              album={album}
+              username={findUsername(album.userId, users)}
+            />
+          ))}
       </div>
 
       <Pagination

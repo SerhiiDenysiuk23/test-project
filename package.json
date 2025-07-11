@@ -14,6 +14,7 @@
     "@mediapipe/hands": "^0.4.1675469240",
     "@tanstack/react-query": "^5.81.5",
     "@tensorflow-models/hand-pose-detection": "^2.0.1",
+    "json-server": "^1.0.0-beta.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.3"
