@@ -33,7 +33,6 @@ export const AlbumsPage = () => {
     isPending: isPendingAddAlbum,
     variables: addAlbumVariables,
     mutate: addAlbumMutate,
-    isError: isErrorAddAlbum,
   } = useMutation({
     mutationFn: ({ title, userId }: { title: string; userId: number }) =>
       createAlbum(title, userId),
