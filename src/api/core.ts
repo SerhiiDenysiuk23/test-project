@@ -17,13 +17,30 @@ export interface Photo {
 
 const BASE = 'http://localhost:3000';
 
+const request = async (
+  route: string,
+  method: 'GET' | 'POST',
+  body?: BodyInit | null
+) => {
+  const res = await fetch(`${BASE + route}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  });
+
+  if (!res.ok)
+    throw new Error(`${method === 'GET' ? 'Fetch' : 'Mutate'} error.`);
+
+  return await res.json();
+};
+
 export const fetchAlbums = async (
   page: number,
   limit: number
 ): Promise<{ data: Album[]; totalCount: number }> => {
-  const res = await fetch(`${BASE}/albums`);
-  const totalCount = 100;
-  let data: Album[] = await res.json();
+  let data: Album[] = await request('/albums', 'GET');
+
+  const totalCount = data.length;
 
   data = data.reverse();
   const startIndex = (page - 1) * limit;
@@ -34,13 +51,11 @@ export const fetchAlbums = async (
 };
 
 export const fetchUsers = async (): Promise<User[]> => {
-  const res = await fetch(`${BASE}/users`);
-  return res.json();
+  return await request('/users', 'GET');
 };
 
 export const fetchPhotosByAlbum = async (albumId: string): Promise<Photo[]> => {
-  const res = await fetch(`${BASE}/photos?albumId=${albumId}`);
-  return res.json();
+  return await request(`/photos?albumId=${albumId}`, 'GET');
 };
 
 export const createAlbum = async (
@@ -51,12 +66,7 @@ export const createAlbum = async (
     setTimeout(resolve, 2000);
   });
 
-  const res = await fetch(`${BASE}/albums`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, userId }),
-  });
-  return res.json();
+  return await request('/albums', 'POST', JSON.stringify({ title, userId }));
 };
 
 export const createPhoto = async (
@@ -65,10 +75,9 @@ export const createPhoto = async (
   url: string,
   thumbnailUrl: string
 ): Promise<Photo> => {
-  const res = await fetch(`${BASE}/photos`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ albumId, title, url, thumbnailUrl }),
-  });
-  return res.json();
+  return await request(
+    '/photos',
+    'POST',
+    JSON.stringify({ albumId, title, url, thumbnailUrl })
+  );
 };

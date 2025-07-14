@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState, type FormEvent } from 'react';
-import { fetchUsers, fetchAlbums, createAlbum, type User } from '../api/core';
+import { useRef, type FormEvent } from 'react';
 import { AlbumCard } from './AlbumCard';
 import { Pagination } from './Pagination';
+import { useGetUsers } from '../hooks/useUsers';
+import { useAddAlbum, useGetAlbums } from '../hooks/useAlbums';
+import type { User } from '../api/core';
 
 const LIMIT = 11;
 
@@ -11,34 +12,13 @@ const findUsername = (userId: string | number, users?: User[]) => {
 };
 
 export const AlbumsPage = () => {
-  const [page, setPage] = useState(1);
-  const queryClient = useQueryClient();
   const titleRef = useRef<HTMLInputElement | null>(null);
   const userRef = useRef<HTMLSelectElement | null>(null);
 
-  const { data: users } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => fetchUsers(),
-  });
-  const {
-    data: albumsData,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['albums', page],
-    queryFn: () => fetchAlbums(page, LIMIT),
-  });
-
-  const {
-    isPending: isPendingAddAlbum,
-    variables: addAlbumVariables,
-    mutate: addAlbumMutate,
-  } = useMutation({
-    mutationFn: ({ title, userId }: { title: string; userId: number }) =>
-      createAlbum(title, userId),
-    // onSuccess: () => queryClient.invalidateQueries({ queryKey: ['albums'] }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['albums'] }),
-  });
+  const { data: users } = useGetUsers();
+  const { data: albumsData, isLoading, isError } = useGetAlbums(LIMIT);
+  const { isPending: isPendingAddAlbum, mutate: addAlbumMutate } =
+    useAddAlbum();
 
   const handleAddSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,13 +27,14 @@ export const AlbumsPage = () => {
     if (title && userId) {
       addAlbumMutate({ title, userId });
       if (titleRef.current) titleRef.current.value = '';
+      if (userRef.current) userRef.current.value = '';
     }
   };
 
   if (isLoading) {
     return <div className="loader" />;
   }
-  if (isError) {
+  if (!albumsData && isError) {
     return <p>❌ Error loading albums</p>;
   }
 
@@ -80,12 +61,6 @@ export const AlbumsPage = () => {
       </form>
 
       <div className="album-list">
-        {isPendingAddAlbum && (
-          <AlbumCard
-            album={addAlbumVariables}
-            username={findUsername(addAlbumVariables.userId, users)}
-          />
-        )}
         {!!albumsData &&
           albumsData.data.map((album) => (
             <AlbumCard
@@ -96,12 +71,7 @@ export const AlbumsPage = () => {
           ))}
       </div>
 
-      <Pagination
-        currentPage={page}
-        totalCount={albumsData?.totalCount ?? 0}
-        limit={LIMIT}
-        onPageChange={setPage}
-      />
+      <Pagination totalCount={albumsData?.totalCount ?? 0} limit={LIMIT} />
     </section>
   );
 };

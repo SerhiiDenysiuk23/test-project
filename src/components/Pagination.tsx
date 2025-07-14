@@ -1,17 +1,13 @@
+import { useSearchParams } from 'react-router-dom';
+
 interface Props {
-  currentPage: number;
   totalCount: number;
   limit: number;
-  // eslint-disable-next-line no-unused-vars
-  onPageChange: (page: number) => void;
 }
 
-export const Pagination = ({
-  currentPage,
-  totalCount,
-  limit,
-  onPageChange,
-}: Props) => {
+export const Pagination = ({ totalCount, limit }: Props) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get('page') ?? '1');
   const totalPages = Math.ceil(totalCount / limit);
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
   return (
@@ -19,7 +15,7 @@ export const Pagination = ({
       {pages.map((page) => (
         <button
           key={page}
-          onClick={() => onPageChange(page)}
+          onClick={() => setSearchParams({ page: page.toString() })}
           className={page === currentPage ? 'active' : ''}
         >
           {page}

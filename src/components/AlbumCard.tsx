@@ -2,16 +2,14 @@ import { Link } from 'react-router-dom';
 import type { Album } from '../api/core';
 
 interface Props {
-  album: Album | Omit<Album, 'id'>;
+  album: Album;
   username: string;
 }
 
 export const AlbumCard = ({ album, username }: Props) => {
-  const hasId = 'id' in album;
-
   return (
     <div className="album-card">
-      {hasId ? (
+      {album.id > 0 || typeof album.id === 'string' ? (
         <Link to={`/albums/${album.id}`} className="album-card">
           <h3>{album.title}</h3>
           <p>by {username}</p>
