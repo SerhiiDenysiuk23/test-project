@@ -1,9 +1,14 @@
-import { useRef, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { AlbumCard } from './AlbumCard';
 import { Pagination } from './Pagination';
 import { useGetUsers } from '../hooks/useUsers';
-import { useAddAlbum, useGetAlbums } from '../hooks/useAlbums';
-import type { User } from '../api/core';
+import {
+  useAddAlbum,
+  useDeleteAlbum,
+  useGetAlbums,
+  useUpdateAlbum,
+} from '../hooks/useAlbums';
+import type { Album, User } from '../api/core';
 
 const LIMIT = 11;
 
@@ -14,21 +19,39 @@ const findUsername = (userId: string | number, users?: User[]) => {
 export const AlbumsPage = () => {
   const titleRef = useRef<HTMLInputElement | null>(null);
   const userRef = useRef<HTMLSelectElement | null>(null);
+  const [editId, setEditId] = useState<string | number | null>(null);
 
   const { data: users } = useGetUsers();
   const { data: albumsData, isLoading, isError } = useGetAlbums(LIMIT);
   const { isPending: isPendingAddAlbum, mutate: addAlbumMutate } =
     useAddAlbum();
+  const { mutate: deleteAlbumMutate } = useDeleteAlbum();
+  const { mutate: updateAlbumMutation } = useUpdateAlbum();
 
   const handleAddSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const title = titleRef.current?.value || '';
-    const userId = Number(userRef.current?.value);
-    if (title && userId) {
-      addAlbumMutate({ title, userId });
-      if (titleRef.current) titleRef.current.value = '';
-      if (userRef.current) userRef.current.value = '';
-    }
+    const userId = userRef.current?.value || '';
+    if (!(title && userId)) return;
+
+    if (editId) {
+      updateAlbumMutation({ title, userId, id: editId });
+      setEditId(null);
+    } else addAlbumMutate({ title, userId });
+
+    if (titleRef.current) titleRef.current.value = '';
+    if (userRef.current) userRef.current.value = '';
+  };
+
+  const handleDeleteAlbum = (album: Album) => {
+    if (!confirm(`Delete album "${album.title}"?`)) return;
+    deleteAlbumMutate(album);
+  };
+
+  const handleUpdateAlbum = (album: Album) => {
+    setEditId(album.id);
+    if (titleRef.current) titleRef.current.value = album.title;
+    if (userRef.current) userRef.current.value = album.userId.toString();
   };
 
   if (isLoading) {
@@ -67,6 +90,8 @@ export const AlbumsPage = () => {
               key={album.id}
               album={album}
               username={findUsername(album.userId, users)}
+              onDelete={handleDeleteAlbum}
+              onEdit={handleUpdateAlbum}
             />
           ))}
       </div>

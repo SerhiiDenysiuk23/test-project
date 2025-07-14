@@ -1,25 +1,27 @@
 export interface Album {
-  userId: number | number;
-  id: number | number;
+  userId: IdType;
+  id: IdType;
   title: string;
 }
 export interface User {
-  id: number | number;
+  id: IdType;
   username: string;
 }
 export interface Photo {
-  albumId: number | number;
-  id: number | number;
+  albumId: IdType;
+  id: IdType;
   title: string;
   url: string;
   thumbnailUrl: string;
 }
 
+export type IdType = number | string;
+
 const BASE = 'http://localhost:3000';
 
 const request = async (
   route: string,
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   body?: BodyInit | null
 ) => {
   const res = await fetch(`${BASE + route}`, {
@@ -54,13 +56,13 @@ export const fetchUsers = async (): Promise<User[]> => {
   return await request('/users', 'GET');
 };
 
-export const fetchPhotosByAlbum = async (albumId: string): Promise<Photo[]> => {
+export const fetchPhotosByAlbum = async (albumId: IdType): Promise<Photo[]> => {
   return await request(`/photos?albumId=${albumId}`, 'GET');
 };
 
 export const createAlbum = async (
   title: string,
-  userId: number
+  userId: IdType
 ): Promise<Album> => {
   await new Promise((resolve) => {
     setTimeout(resolve, 2000);
@@ -69,8 +71,24 @@ export const createAlbum = async (
   return await request('/albums', 'POST', JSON.stringify({ title, userId }));
 };
 
+export const updateAlbum = async (album: Album): Promise<Album> => {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 2000);
+  });
+
+  return await request(`/albums/${album.id}`, 'PUT', JSON.stringify(album));
+};
+
+export const deleteAlbum = async (album: Album): Promise<Album> => {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 2000);
+  });
+
+  return await request(`/albums/${album.id}`, 'DELETE');
+};
+
 export const createPhoto = async (
-  albumId: number,
+  albumId: IdType,
   title: string,
   url: string,
   thumbnailUrl: string
