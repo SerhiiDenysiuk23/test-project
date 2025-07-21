@@ -8,9 +8,8 @@ import {
   useGetAlbums,
   useUpdateAlbum,
 } from '../hooks/useAlbums';
-import type { Album, User } from '../api/core';
-
-const LIMIT = 11;
+import { LIMIT, type Album, type User } from '../api/core';
+import { useSearchParams } from 'react-router-dom';
 
 const findUsername = (userId: string | number, users?: User[]) => {
   return users?.find((u) => u.id == userId)?.username || 'Unknown';
@@ -20,9 +19,11 @@ export const AlbumsPage = () => {
   const titleRef = useRef<HTMLInputElement | null>(null);
   const userRef = useRef<HTMLSelectElement | null>(null);
   const [editId, setEditId] = useState<string | number | null>(null);
+  const [searchParams] = useSearchParams();
+  const page = parseInt(searchParams.get('page') ?? '1');
 
   const { data: users } = useGetUsers();
-  const { data: albumsData, isLoading, isError } = useGetAlbums(LIMIT);
+  const { data: albumsData, isLoading, isError } = useGetAlbums(page);
   const { isPending: isPendingAddAlbum, mutate: addAlbumMutate } =
     useAddAlbum();
   const { mutate: deleteAlbumMutate } = useDeleteAlbum();
@@ -37,7 +38,7 @@ export const AlbumsPage = () => {
     if (editId) {
       updateAlbumMutation({ title, userId, id: editId });
       setEditId(null);
-    } else addAlbumMutate({ title, userId });
+    } else addAlbumMutate({ title, userId, id: crypto.randomUUID() });
 
     if (titleRef.current) titleRef.current.value = '';
     if (userRef.current) userRef.current.value = '';
@@ -79,7 +80,7 @@ export const AlbumsPage = () => {
             ))}
         </select>
         <button type="submit" disabled={isPendingAddAlbum}>
-          Add Album
+          {editId ? 'Update Album' : 'Add Album'}
         </button>
       </form>
 

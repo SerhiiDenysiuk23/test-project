@@ -17,7 +17,8 @@ export interface Photo {
 
 export type IdType = number | string;
 
-const BASE = 'http://localhost:3000';
+const BASE = 'http://localhost:8080';
+export const LIMIT = 11;
 
 const request = async (
   route: string,
@@ -37,16 +38,15 @@ const request = async (
 };
 
 export const fetchAlbums = async (
-  page: number,
-  limit: number
+  page: number
 ): Promise<{ data: Album[]; totalCount: number }> => {
   let data: Album[] = await request('/albums', 'GET');
 
   const totalCount = data.length;
 
   data = data.reverse();
-  const startIndex = (page - 1) * limit;
-  const endIndex = startIndex + limit;
+  const startIndex = (page - 1) * LIMIT;
+  const endIndex = startIndex + LIMIT;
   const paginatedData = data.slice(startIndex, endIndex);
 
   return { data: paginatedData, totalCount };
@@ -60,15 +60,12 @@ export const fetchPhotosByAlbum = async (albumId: IdType): Promise<Photo[]> => {
   return await request(`/photos?albumId=${albumId}`, 'GET');
 };
 
-export const createAlbum = async (
-  title: string,
-  userId: IdType
-): Promise<Album> => {
+export const createAlbum = async (album: Album): Promise<Album> => {
   await new Promise((resolve) => {
     setTimeout(resolve, 2000);
   });
 
-  return await request('/albums', 'POST', JSON.stringify({ title, userId }));
+  return await request('/albums', 'POST', JSON.stringify(album));
 };
 
 export const updateAlbum = async (album: Album): Promise<Album> => {

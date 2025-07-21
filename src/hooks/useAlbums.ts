@@ -6,19 +6,14 @@ import {
   updateAlbum,
   type Album,
 } from '../api/core';
-import { useSearchParams } from 'react-router-dom';
 
 const ALBUMS_KEY = 'albums';
 const LIST_KEY = 'list';
 
-export const useGetAlbums = (limit: number) => {
-  const [searchParams] = useSearchParams();
-  const page = parseInt(searchParams.get('page') ?? '1');
-
+export const useGetAlbums = (page: number) => {
   const query = useQuery({
     queryKey: [ALBUMS_KEY, LIST_KEY, page],
-    queryFn: () => fetchAlbums(page, limit),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => fetchAlbums(page),
   });
 
   return { ...query };
@@ -28,36 +23,31 @@ export const useAddAlbum = () => {
   const queryClient = useQueryClient();
 
   const key = [ALBUMS_KEY, LIST_KEY, 1];
+  const globalKey = [ALBUMS_KEY, LIST_KEY];
 
   const mutation = useMutation({
-    mutationFn: ({ title, userId }: Omit<Album, 'id'>) =>
-      createAlbum(title, userId),
-    onMutate: async ({ title, userId }) => {
+    mutationKey: key,
+    mutationFn: (album: Album) => createAlbum(album),
+    onMutate: async (album) => {
       await queryClient.cancelQueries({
-        queryKey: key,
+        queryKey: globalKey,
       });
-      const newId = Math.random();
-      const prevList = queryClient.getQueryData(key);
 
-      queryClient.setQueryData(
+      queryClient.setQueryData<{ data: Album[]; totalCount: number }>(
         key,
-        (old: { data: Album[]; totalCount: number }) =>
-          old
+        (prev) =>
+          prev
             ? {
-                totalCount: old.totalCount + 1,
-                data: [{ title, userId, id: -newId }, ...old.data],
+                totalCount: prev.totalCount + 1,
+                data: [album, ...prev.data],
               }
             : undefined
       );
-      return { prevList };
     },
-    onError: (err, _, context) => {
-      // eslint-disable-next-line no-console
-      console.error(err);
-      queryClient.setQueryData(key, context?.prevList);
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: key }) !== 1) return;
+      queryClient.invalidateQueries({ queryKey: globalKey });
     },
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: [ALBUMS_KEY, LIST_KEY] }),
   });
 
   return mutation;
@@ -65,42 +55,32 @@ export const useAddAlbum = () => {
 
 export const useUpdateAlbum = () => {
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const page = parseInt(searchParams.get('page') ?? '1');
 
-  const key = [ALBUMS_KEY, LIST_KEY, page];
+  const key = [ALBUMS_KEY, LIST_KEY];
 
   const mutation = useMutation({
+    mutationKey: key,
     mutationFn: (album: Album) => updateAlbum(album),
     onMutate: async (album) => {
       await queryClient.cancelQueries({
         queryKey: key,
       });
-      const prevList = queryClient.getQueryData(key);
 
-      queryClient.setQueryData(
+      queryClient.setQueryData<{ data: Album[]; totalCount: number }>(
         key,
-        (old: { data: Album[]; totalCount: number }) => {
-          const i = old.data.findIndex((x) => x.id == album.id);
-          if (old && i !== -1) {
-            const newList = [...old.data];
-            newList[i] = album;
-            return {
-              ...old,
-              data: newList,
-            };
-          }
-          return;
-        }
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                data: prev.data.map((x) => (x.id === album.id ? album : x)),
+              }
+            : undefined
       );
-      return { prevList };
     },
-    onError: (err, _, context) => {
-      // eslint-disable-next-line no-console
-      console.error(err);
-      queryClient.setQueryData(key, context?.prevList);
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: key }) !== 1) return;
+      queryClient.invalidateQueries({ queryKey: key });
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
   return mutation;
@@ -108,10 +88,8 @@ export const useUpdateAlbum = () => {
 
 export const useDeleteAlbum = () => {
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const page = parseInt(searchParams.get('page') ?? '1');
 
-  const key = [ALBUMS_KEY, LIST_KEY, page];
+  const key = [ALBUMS_KEY, LIST_KEY];
 
   const mutation = useMutation({
     mutationFn: (album: Album) => deleteAlbum(album),
@@ -119,27 +97,24 @@ export const useDeleteAlbum = () => {
       await queryClient.cancelQueries({
         queryKey: key,
       });
-      const prevList = queryClient.getQueryData(key);
 
-      queryClient.setQueryData(
+      queryClient.setQueryData<{ data: Album[]; totalCount: number }>(
         key,
-        (old: { data: Album[]; totalCount: number }) =>
-          old
+        (prev) =>
+          prev
             ? {
-                totalCount: old.totalCount - 1,
-                data: old.data.filter((x) => x.id !== album.id),
+                totalCount: prev.data.includes(album)
+                  ? prev.totalCount - 1
+                  : prev.totalCount,
+                data: prev.data.filter((x) => x.id !== album.id),
               }
             : undefined
       );
-      return { prevList };
     },
-    onError: (err, _, context) => {
-      // eslint-disable-next-line no-console
-      console.error(err);
-      queryClient.setQueryData(key, context?.prevList);
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: key }) !== 1) return;
+      queryClient.invalidateQueries({ queryKey: [ALBUMS_KEY, LIST_KEY] });
     },
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: [ALBUMS_KEY, LIST_KEY] }),
   });
 
   return mutation;
