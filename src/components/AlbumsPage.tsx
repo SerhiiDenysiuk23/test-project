@@ -1,59 +1,26 @@
-import { useRef, useState, type FormEvent } from 'react';
 import { AlbumCard } from './AlbumCard';
 import { Pagination } from './Pagination';
 import { useGetUsers } from '../hooks/useUsers';
-import {
-  useAddAlbum,
-  useDeleteAlbum,
-  useGetAlbums,
-  useUpdateAlbum,
-} from '../hooks/useAlbums';
+import { useDeleteAlbum, useGetAlbums } from '../hooks/useAlbums';
 import { LIMIT, type Album, type User } from '../api/core';
 import { useSearchParams } from 'react-router-dom';
+import { AddAlbumForm } from './AddAlbumForm';
+import { useState } from 'react';
+import { AddUserForm } from './AddUserForm';
 
 const findUsername = (userId: string | number, users?: User[]) => {
   return users?.find((u) => u.id == userId)?.username || 'Unknown';
 };
 
 export const AlbumsPage = () => {
-  const titleRef = useRef<HTMLInputElement | null>(null);
-  const userRef = useRef<HTMLSelectElement | null>(null);
-  const [editId, setEditId] = useState<string | number | null>(null);
   const [searchParams] = useSearchParams();
   const page = parseInt(searchParams.get('page') ?? '1');
 
   const { data: users } = useGetUsers();
   const { data: albumsData, isLoading, isError } = useGetAlbums(page);
-  const { isPending: isPendingAddAlbum, mutate: addAlbumMutate } =
-    useAddAlbum();
+  const [editableAlbum, setEditableAlbum] = useState<Album | null>(null);
+
   const { mutate: deleteAlbumMutate } = useDeleteAlbum();
-  const { mutate: updateAlbumMutation } = useUpdateAlbum();
-
-  const handleAddSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const title = titleRef.current?.value || '';
-    const userId = userRef.current?.value || '';
-    if (!(title && userId)) return;
-
-    if (editId) {
-      updateAlbumMutation({ title, userId, id: editId });
-      setEditId(null);
-    } else addAlbumMutate({ title, userId, id: crypto.randomUUID() });
-
-    if (titleRef.current) titleRef.current.value = '';
-    if (userRef.current) userRef.current.value = '';
-  };
-
-  const handleDeleteAlbum = (album: Album) => {
-    if (!confirm(`Delete album "${album.title}"?`)) return;
-    deleteAlbumMutate(album);
-  };
-
-  const handleUpdateAlbum = (album: Album) => {
-    setEditId(album.id);
-    if (titleRef.current) titleRef.current.value = album.title;
-    if (userRef.current) userRef.current.value = album.userId.toString();
-  };
 
   if (isLoading) {
     return <div className="loader" />;
@@ -62,27 +29,26 @@ export const AlbumsPage = () => {
     return <p>❌ Error loading albums</p>;
   }
 
+  const handleDeleteAlbum = (album: Album) => {
+    if (!confirm(`Delete album "${album.title}"?`)) return;
+    deleteAlbumMutate(album);
+  };
+
+  const handleCleanUpEditable = () => {
+    setEditableAlbum(null);
+  };
+
   return (
     <section className="container">
       <h2>📸 Albums</h2>
 
-      <form onSubmit={handleAddSubmit} className="album-form">
-        <input ref={titleRef} placeholder="New album title" />
-        <select ref={userRef} defaultValue="">
-          <option value="" disabled>
-            Select user
-          </option>
-          {!!users &&
-            users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.username}
-              </option>
-            ))}
-        </select>
-        <button type="submit" disabled={isPendingAddAlbum}>
-          {editId ? 'Update Album' : 'Add Album'}
-        </button>
-      </form>
+      <AddAlbumForm
+        users={users ?? []}
+        editableAlbum={editableAlbum}
+        onCleanUpEditable={handleCleanUpEditable}
+      />
+
+      <AddUserForm />
 
       <div className="album-list">
         {!!albumsData &&
@@ -92,7 +58,7 @@ export const AlbumsPage = () => {
               album={album}
               username={findUsername(album.userId, users)}
               onDelete={handleDeleteAlbum}
-              onEdit={handleUpdateAlbum}
+              onEdit={setEditableAlbum}
             />
           ))}
       </div>

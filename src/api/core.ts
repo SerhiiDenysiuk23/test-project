@@ -17,7 +17,7 @@ export interface Photo {
 
 export type IdType = number | string;
 
-const BASE = 'http://localhost:8080';
+const BASE = 'http://localhost:3000';
 export const LIMIT = 11;
 
 const request = async (
@@ -37,6 +37,8 @@ const request = async (
   return await res.json();
 };
 
+//#region Fetch
+
 export const fetchAlbums = async (
   page: number
 ): Promise<{ data: Album[]; totalCount: number }> => {
@@ -53,12 +55,16 @@ export const fetchAlbums = async (
 };
 
 export const fetchUsers = async (): Promise<User[]> => {
-  return await request('/users', 'GET');
+  return (await request('/users', 'GET')).reverse();
 };
 
 export const fetchPhotosByAlbum = async (albumId: IdType): Promise<Photo[]> => {
   return await request(`/photos?albumId=${albumId}`, 'GET');
 };
+
+//#endregion
+
+//#region Create
 
 export const createAlbum = async (album: Album): Promise<Album> => {
   await new Promise((resolve) => {
@@ -67,6 +73,29 @@ export const createAlbum = async (album: Album): Promise<Album> => {
 
   return await request('/albums', 'POST', JSON.stringify(album));
 };
+
+export const createUser = async (user: User): Promise<User> => {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 2000);
+  });
+
+  return await request('/users', 'POST', JSON.stringify(user));
+};
+
+export const createPhoto = async (
+  albumId: IdType,
+  title: string,
+  url: string,
+  thumbnailUrl: string
+): Promise<Photo> => {
+  return await request(
+    '/photos',
+    'POST',
+    JSON.stringify({ albumId, title, url, thumbnailUrl })
+  );
+};
+
+//#endregion
 
 export const updateAlbum = async (album: Album): Promise<Album> => {
   await new Promise((resolve) => {
@@ -82,17 +111,4 @@ export const deleteAlbum = async (album: Album): Promise<Album> => {
   });
 
   return await request(`/albums/${album.id}`, 'DELETE');
-};
-
-export const createPhoto = async (
-  albumId: IdType,
-  title: string,
-  url: string,
-  thumbnailUrl: string
-): Promise<Photo> => {
-  return await request(
-    '/photos',
-    'POST',
-    JSON.stringify({ albumId, title, url, thumbnailUrl })
-  );
 };

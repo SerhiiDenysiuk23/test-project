@@ -65,14 +65,15 @@ export const useUpdateAlbum = () => {
       await queryClient.cancelQueries({
         queryKey: key,
       });
-
-      queryClient.setQueryData<{ data: Album[]; totalCount: number }>(
-        key,
+      queryClient.setQueriesData<{ data: Album[]; totalCount: number }>(
+        { queryKey: key },
         (prev) =>
           prev
             ? {
                 ...prev,
-                data: prev.data.map((x) => (x.id === album.id ? album : x)),
+                data: prev.data.map((x) => {
+                  return x.id == album.id ? album : x;
+                }),
               }
             : undefined
       );
@@ -98,8 +99,8 @@ export const useDeleteAlbum = () => {
         queryKey: key,
       });
 
-      queryClient.setQueryData<{ data: Album[]; totalCount: number }>(
-        key,
+      queryClient.setQueriesData<{ data: Album[]; totalCount: number }>(
+        { queryKey: key },
         (prev) =>
           prev
             ? {
