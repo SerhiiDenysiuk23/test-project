@@ -1,0 +1,72 @@
+.albums-page .album-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.album-card {
+    display: block;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.2s;
+}
+
+.album-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.album-card h3 {
+    margin: 0 0 0.5rem;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.pagination button {
+    margin: 0 0.25rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: #eee;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.pagination button.active {
+    background: #333;
+    color: #fff;
+}
+
+.album-form {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+}
+
+.album-form>* {
+    border: 1px solid #333;
+    padding: 5px 10px;
+    border-radius: 10px;
+}
+
+.album-form button {
+    background: #333;
+    color: white;
+}
+
+
+.album-form button:hover {
+    opacity: .9;
+}
+
+
+.album-form button:disabled {
+    opacity: .5;
+    cursor: default;
+}
